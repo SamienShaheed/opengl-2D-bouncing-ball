@@ -27,11 +27,13 @@ struct Vec2 {
 // Global parameters
 int WINDOW_WIDTH = 1560;
 int WINDOW_HEIGHT = 840;
+int HALF_WIDTH = (int)(WINDOW_WIDTH/2);
+int HALF_HEIGHT = (int)(WINDOW_HEIGHT/2);
 int RADIUS = 50;
 int SEGMENTS = 100;
 std::string WINDOW_TITLE = "Physics Test";
 
-Vec2 VELOCITY = {-10.0f, -10.0f};
+Vec2 VELOCITY = {-200.0f, -240.0f};
 Vec2 position = {0, 0};
 
 double lastFrameTime = glfwGetTime();
@@ -43,10 +45,8 @@ void myInit (void) {
     glPointSize(1.0); // point size
     glMatrixMode(GL_PROJECTION); // projection matrix
     glLoadIdentity(); // load identity matrix
-    
-    int halfWidth = (int)(WINDOW_WIDTH/2);
-    int halfHeight = (int)(WINDOW_HEIGHT/2);
-    glOrtho(-halfWidth, halfWidth, -halfHeight, halfHeight, -1, 1); // orthographic projection
+
+    glOrtho(-HALF_WIDTH, HALF_WIDTH, -HALF_HEIGHT, HALF_HEIGHT, -1, 1); // orthographic projection
 }
 
 // Draw the circle
@@ -86,10 +86,9 @@ double computeDeltatime() {
 
 // check if collides with wall, if yes return -1 otherwise returns 1
 int checkCollisionForX(float x) {
-    int halfWidth = (int)(WINDOW_WIDTH/2);
     // wall coordinates
-    float leftWall = -halfWidth;
-    float rightWall = halfWidth;
+    float leftWall = -HALF_WIDTH;
+    float rightWall = HALF_WIDTH;
     // ball coordinates
     float leftEdge = x - RADIUS;
     float rightEdge = x + RADIUS;
@@ -103,10 +102,9 @@ int checkCollisionForX(float x) {
 
 // check if collides with wall, if yes return -1 otherwise returns 1
 int checkCollisionForY(float y) {
-    int halfHeight = (int)(WINDOW_HEIGHT/2);
     // wall coordinates
-    float topWall = halfHeight;
-    float bottomWall = -halfHeight;
+    float topWall = HALF_HEIGHT;
+    float bottomWall = -HALF_HEIGHT;
     // ball coordinates
     float topEdge = y + RADIUS;
     float bottomEdge = y - RADIUS;
@@ -116,6 +114,42 @@ int checkCollisionForY(float y) {
     }
 
     return 1;
+}
+
+// correct X Position on collision
+float correctXPosition(float x) {
+    float leftWall  = -HALF_WIDTH;
+    float rightWall =  HALF_WIDTH;
+    float leftEdge  = x - RADIUS;
+    float rightEdge = x + RADIUS;
+
+    if (leftEdge < leftWall) {
+        float overlap = leftWall - leftEdge;
+        return x + overlap; // move ball right
+    }
+    if (rightEdge > rightWall) {
+        float overlap = rightEdge - rightWall;
+        return x - overlap; // move ball left
+    }
+    return x;
+}
+
+// correct Y Position on collision
+float correctYPosition(float y) {
+    float topWall    =  HALF_HEIGHT;
+    float bottomWall = -HALF_HEIGHT;
+    float topEdge    = y + RADIUS;
+    float bottomEdge = y - RADIUS;
+
+    if (topEdge > topWall) {
+        float overlap = topEdge - topWall;
+        return y - overlap; // move ball down
+    }
+    if (bottomEdge < bottomWall) {
+        float overlap = bottomWall - bottomEdge;
+        return y + overlap; // move ball up
+    }
+    return y;
 }
 
 // Main function
@@ -138,16 +172,17 @@ int main() {
         
         drawCircle(x, y, RADIUS, SEGMENTS);
 
+        if (checkCollisionForX(x) == -1) { x = correctXPosition(x);}
+        if (checkCollisionForY(y) == -1) { y = correctYPosition(y);}
+
         // update velocity based on collision
         VELOCITY.x = VELOCITY.x * checkCollisionForX(x);
         VELOCITY.y = VELOCITY.y * checkCollisionForY(y);
 
-        cout << "Velocity Y: " << VELOCITY.y << endl;
-
         // change position vector based on velocity
         deltatime = computeDeltatime();
-        x += (x + VELOCITY.x) * deltatime;
-        y += (y + VELOCITY.y) * deltatime;
+        x += (VELOCITY.x) * deltatime;
+        y += (VELOCITY.y) * deltatime;
 
         glfwSwapBuffers(window);
         glfwPollEvents();
